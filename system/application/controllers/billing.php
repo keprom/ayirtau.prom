@@ -1195,7 +1195,7 @@ function dob($text)
 		$data['data_schet']=$_POST['data_schet'];
 		
 		
-		$this->load->view("reports/schetoplata",$data);
+		$this->load->view("reports/schetoplata_new",$data);
 	}
 	function akt()
 	{
