@@ -1190,16 +1190,16 @@ function dob($text)
             if (trim($_POST['tariff'][$i]) == '') {
                 continue;
             }
-            $t[$j]['tariff_value'] = round($_POST['tariff_value'][$i], 2);
-            $t[$j]['tariff_value_nds'] = round($_POST['tariff_value'][$i] * (1 + 0.01 * $data['period']->nds), 2);
+            $t[$j]['tariff_value'] = $_POST['tariff_value'][$i];
+            $t[$j]['tariff_value_nds'] = $_POST['tariff_value'][$i] * (1 + 0.01 * $data['period']->nds);
             if ($_POST['type'] == 'by_tenge') {
                 $t[$j]['kvt'] = round($_POST['tariff'][$i] / $t[$j]['tariff_value_nds']);
-                $t[$j]['sum_with_nds'] = $t[$j]['kvt'] *  $t[$j]['tariff_value_nds'];
-                $t[$j]['sum_nds'] = round($_POST['tariff_value'][$i] * $t[$j]['kvt'] * $data['period']->nds / 100, 2);
+                $t[$j]['sum_with_nds'] = $t[$j]['kvt'] *  $t[$j]['tariff_value']* (1 + 0.01 * $data['period']->nds);
+                $t[$j]['sum_nds'] = $_POST['tariff_value'][$i] * $t[$j]['kvt'] * $data['period']->nds / 100;
             } elseif ($_POST['type'] == 'by_kvt') {
                 $t[$j]['sum_with_nds'] = $t[$j]['tariff_value_nds'] * $_POST['tariff'][$i];
                 $t[$j]['kvt'] = $_POST['tariff'][$i];
-                $t[$j]['sum_nds'] = round($_POST['tariff_value'][$i] * $t[$j]['kvt'] * $data['period']->nds / 100, 2);
+                $t[$j]['sum_nds'] = $_POST['tariff_value'][$i] * $t[$j]['kvt'] * $data['period']->nds / 100;
             }
             $j++;
         }
