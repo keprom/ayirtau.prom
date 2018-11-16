@@ -73,7 +73,7 @@ $sno_date = strlen($data_schet) == 0 ? $schetfactura_date->date : $data_schet;
             <td align="center"><?php echo $i++; ?></td>
             <td></td>
             <td align="center">Электроэнергия</td>
-            <td class="td-number"><?php echo prettify_number($t[$j]['kvt']); ?></td>
+            <td class="td-number"><?php echo prettify_number($t[$j]['kvt'],0); ?></td>
             <td align="center">кВт</td>
             <td class="td-number"><?php echo $t[$j]['tariff_value_nds']; ?></td>
             <td class="td-number"><?php echo prettify_number($t[$j]['sum_with_nds']); ?></td>
