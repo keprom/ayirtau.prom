@@ -1195,11 +1195,11 @@ function dob($text)
             if ($_POST['type'] == 'by_tenge') {
                 $t[$j]['kvt'] = round($_POST['tariff'][$i] / $t[$j]['tariff_value_nds']);
                 $t[$j]['sum_with_nds'] = $t[$j]['kvt'] *  $t[$j]['tariff_value_nds'];
-                $t[$j]['sum_nds'] = round($t[$j]['sum_with_nds'] * $data['period']->nds / 100, 2);
+                $t[$j]['sum_nds'] = round($_POST['tariff_value'][$i] * $t[$j]['kvt'] * $data['period']->nds / 100, 2);
             } elseif ($_POST['type'] == 'by_kvt') {
                 $t[$j]['sum_with_nds'] = $t[$j]['tariff_value_nds'] * $_POST['tariff'][$i];
-                $t[$j]['sum_nds'] = round($t[$j]['sum_with_nds'] * $data['period']->nds / 100, 2);
                 $t[$j]['kvt'] = $_POST['tariff'][$i];
+                $t[$j]['sum_nds'] = round($_POST['tariff_value'][$i] * $t[$j]['kvt'] * $data['period']->nds / 100, 2);
             }
             $j++;
         }
