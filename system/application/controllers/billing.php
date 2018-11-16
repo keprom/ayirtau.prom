@@ -1155,48 +1155,59 @@ function dob($text)
 		$this->load->view("pre_schetoplata2",$data);
 		$this->load->view("right");
 	}
-	function schetoplata()
-	{
-		$sql="SELECT * FROM industry.org_info";
-		$data['org']=$this->db->query($sql)->row();
-		$this->db->where('firm_id',$_POST['firm_id']);
-		$this->db->where('period_id',$_POST['period_id']);
-		$data['schetfactura_date']=$this->db->get('industry.schetfactura_date')->row();
-		$this->load->plugin('chislo');
-		$this->db->where('id',$_POST['firm_id']);
-		$data['firm']=$this->db->get('industry.firm')->row();
-		$data['number']=$_POST['number_schet']==""?$data['schetfactura_date']->id:$_POST['number_schet'];
-		$this->db->where('id',$_POST['period_id']);
-		$data['period']=$this->db->get('industry.period')->row();
-		
-		$this->db->where('id',$data['firm']->bank_id);
-		$data['bank']=$this->db->get("industry.bank")->row();
-		$data['schet']=!isset($_POST['schet'])?" ОПЛАТА":"-ФАКТУРА";
-		
-		
-		if ($_POST['type']=="by_tenge")
-		{
-			$tariff_value=$_POST['tariff_value'];
-			$tariff_kvt=$_POST['tariff'];
-			$buf;
-			for($j=0;$j<$_POST['tariff_count'];$j++)
-			{
-				if ($tariff_value[$j]>0)
-						$buf[$j]=$tariff_kvt[$j] / $tariff_value[$j]/((100+$data['period']->nds)/100);
-					else 
-					$buf[$j]=$tariff_kvt[$j];
-			}
-			$data['tariff_kvt']=$buf;
-		}
-		else 
-			$data['tariff_kvt']=$_POST['tariff'];
-		$data['tariff_value']=$_POST['tariff_value'];
-		$data['tariff_count']=$_POST['tariff_count'];
-		$data['data_schet']=$_POST['data_schet'];
-		
-		
-		$this->load->view("reports/schetoplata_new",$data);
-	}
+
+    function schetoplata()
+    {
+        $sql = "SELECT * FROM industry.org_info";
+        $data['org'] = $this->db->query($sql)->row();
+
+        $this->db->where('firm_id', $_POST['firm_id']);
+        $this->db->where('period_id', $_POST['period_id']);
+        $data['schetfactura_date'] = $this->db->get('industry.schetfactura_date')->row();
+
+        $this->load->plugin('chislo');
+
+        $this->db->where('id', $_POST['firm_id']);
+        $data['firm'] = $this->db->get('industry.firm')->row();
+
+        $data['number'] = $_POST['number_schet'] == "" ? $data['schetfactura_date']->id : $_POST['number_schet'];
+
+        $this->db->where('id', $_POST['period_id']);
+        $data['period'] = $this->db->get('industry.period')->row();
+
+        $this->db->where('id', $data['firm']->bank_id);
+        $data['bank'] = $this->db->get("industry.bank")->row();
+
+        $data['schet'] = !isset($_POST['schet']) ? " ОПЛАТА" : "-ФАКТУРА";
+
+        $data['data_schet'] = $_POST['data_schet'];
+
+        $t_count = $_POST['tariff_count'];
+
+        $t = array();
+        $j = 0;
+        for ($i = 0; $i < $t_count; $i++) {
+            if (trim($_POST['tariff'][$i]) == '') {
+                continue;
+            }
+            $t[$j]['tariff_value'] = round($_POST['tariff_value'][$i], 2);
+            $t[$j]['tariff_value_nds'] = round($_POST['tariff_value'][$i] * (1 + 0.01 * $data['period']->nds), 2);
+            if ($_POST['type'] == 'by_tenge') {
+                $t[$j]['sum_with_nds'] = $_POST['tariff'][$i];
+                $t[$j]['sum_nds'] = round($t[$j]['sum_with_nds'] * $data['period']->nds / 100, 2);
+                $t[$j]['kvt'] = round($_POST['tariff'][$i] / $t[$j]['tariff_value_nds'], 2);
+            } elseif ($_POST['type'] == 'by_kvt') {
+                $t[$j]['sum_with_nds'] = $t[$j]['tariff_value_nds'] * $_POST['tariff'][$i];
+                $t[$j]['sum_nds'] = round($t[$j]['sum_with_nds'] * $data['period']->nds / 100, 2);
+                $t[$j]['kvt'] = $_POST['tariff'][$i];
+            }
+            $j++;
+        }
+
+        $data['t'] = $t;
+        $this->load->view("reports/schetoplata_new", $data);
+    }
+
 	function akt()
 	{
 		$query="SELECT * FROM industry.current_akt WHERE values_set_id=".$this->uri->segment(3);
