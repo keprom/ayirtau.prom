@@ -96,8 +96,8 @@ $sno_date = strlen($data_schet) == 0 ? $schetfactura_date->date : $data_schet;
     </tbody>
 </table>
 <br>
-<p>Всего на сумму <?php echo $sum; ?> тенге</p>
-<p>Всего к оплате <?php echo num2str($sum); ?></p>
+<p>Всего на сумму <?php echo prettify_number($sum); ?> тенге</p>
+<p>Всего к оплате <?php echo num2str(round($sum*100)/100); ?></p>
 
 <br>
 <table class="block">
