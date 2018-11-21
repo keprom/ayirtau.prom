@@ -1150,8 +1150,10 @@ function dob($text)
 		$sql="select distinct value as tariff_value from industry.tariff_value ";
 		$data['tariffs']=$this->db->query($sql);
 
-		
-		$this->left();
+        $this->db->where('id',$_POST['firm_id']);
+        $data['firm_info'] = $this->db->get('industry.firm')->row();
+
+        $this->left();
 		$this->load->view("pre_schetoplata2",$data);
 		$this->load->view("right");
 	}
@@ -1179,6 +1181,8 @@ function dob($text)
         $data['bank'] = $this->db->get("industry.bank")->row();
 
         $data['schet'] = !isset($_POST['schet']) ? " ОПЛАТА" : "-ФАКТУРА";
+
+        $data['dogovor'] = $_POST['dogovor'];
 
         $data['data_schet'] = $_POST['data_schet'];
 

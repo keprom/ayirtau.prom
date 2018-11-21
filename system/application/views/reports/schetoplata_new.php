@@ -49,7 +49,7 @@ $sno_date = strlen($data_schet) == 0 ? $schetfactura_date->date : $data_schet;
     БИК <?php echo $bank->mfo; ?>, <?php echo $firm->name . ", " . $firm->address; ?></p>
 
 <p>Договор: Договор на поставку электроэнергии
-    №<?php echo $firm->dogovor . " от " . $firm->dogovor_date . " года"; ?></p>
+    №<?php echo $dogovor . " от " . $firm->dogovor_date . " года"; ?></p>
 
 <table class="border-table block">
     <thead>
@@ -73,9 +73,9 @@ $sno_date = strlen($data_schet) == 0 ? $schetfactura_date->date : $data_schet;
             <td align="center"><?php echo $i++; ?></td>
             <td></td>
             <td align="center">Электроэнергия</td>
-            <td class="td-number"><?php echo prettify_number(round($t[$j]['kvt'],0),0); ?></td>
+            <td class="td-number"><?php echo prettify_number(round($t[$j]['kvt'], 0), 0); ?></td>
             <td align="center">кВт/час</td>
-            <td class="td-number"><?php echo round($t[$j]['tariff_value_nds'],2); ?></td>
+            <td class="td-number"><?php echo round($t[$j]['tariff_value_nds'], 2); ?></td>
             <td class="td-number"><?php echo prettify_number($t[$j]['sum_with_nds']); ?></td>
             <?php
             $sum += $t[$j]['sum_with_nds'];
@@ -97,13 +97,13 @@ $sno_date = strlen($data_schet) == 0 ? $schetfactura_date->date : $data_schet;
 </table>
 <br>
 <p>Всего на сумму <?php echo prettify_number($sum); ?> тенге</p>
-<p>Всего к оплате <?php echo num2str(round($sum*100)/100); ?></p>
+<p>Всего к оплате <?php echo num2str(round($sum * 100) / 100); ?></p>
 
 <br>
 <table class="block">
     <tbody>
     <tr>
-        <td width="33%" align="right">Директор </td>
+        <td width="33%" align="right">Директор</td>
         <td width="33%">_______________________________</td>
         <td width="33%" align="left"><?php echo $org->director; ?></td>
     </tr>
