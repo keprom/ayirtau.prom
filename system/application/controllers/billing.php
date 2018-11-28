@@ -408,6 +408,7 @@ function dob($text)
 	}
 	function close_billing_point()
 	{
+        $this->check_billing_point($this->uri->segment(3));
 		$sql="update industry.billing_point set deleted_point=true where id=".$this->uri->segment(3);
 		$this->db->query($sql);
 		redirect("billing/firm/".$this->uri->segment(4));
@@ -1212,6 +1213,33 @@ function dob($text)
         $this->load->view("reports/schetoplata_new", $data);
     }
 
+    private function check_billing_point($bill_id)
+    {
+        $bill_id = $this->uri->segment(3);
+        $period_id = $this->get_cpi($bill_id);
+        $this->db->where("bill_id",$bill_id);
+        $this->db->where("period_id",$period_id);
+        $n = $this->db->get("industry.nadbavka_info");
+        if($n->num_rows > 0){
+            die("V dannyi period na tochke ucheta nahodyatsya nadbavki!");
+        }
+        $this->db->where("bill_id",$bill_id);
+        $this->db->where("period_id",$period_id);
+        $sbp = $this->db->get("industry.sovm_billing_point");
+        if($sbp->num_rows > 0){
+            die("Na tochke ucheta imeutsya sovmesntye uchety!");
+        }
+        $this->db->where("bill_id",$bill_id);
+        $unfc = $this->db->get("industry.unfinished_counter");
+        if($unfc->num_rows > 0){
+            die("Na tochke ucheta imeutsya nesnyatye schetchiki!");
+        }
+    }
+
+    private function get_cpi(){
+        return $this->db->query("select * from industry.current_period_id()")->row()->current_period_id;
+    }
+
 	function akt()
 	{
 		$query="SELECT * FROM industry.current_akt WHERE values_set_id=".$this->uri->segment(3);
@@ -1540,8 +1568,10 @@ function dob($text)
 		$this->session->set_flashdata('is_deleted', $is_deleted);
 		redirect("billing/point/".$point_id);		
 	}
+
 	function delete_billing_point()
 	{
+        $this->check_billing_point($this->uri->segment(3));
 		$sql="select firm_id from industry.billing_point where id=".$this->uri->segment(3);
 		$firm_id=$this->db->query($sql)->row()->firm_id;
 		$sql="select count(*) as count from industry.counter where point_id=".$this->uri->segment(3);
@@ -1563,6 +1593,7 @@ function dob($text)
 		$this->session->set_flashdata('is_deleted',$count);
 		redirect("billing/firm/".$firm_id);		 
 	}
+
 	function edit_billing_point()
 	{
 		$this->db->where('id',$this->uri->segment(3));
