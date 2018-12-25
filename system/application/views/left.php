@@ -91,6 +91,7 @@ function is_s($var,$poisk)
 								<li><?php  echo anchor("billing/org_info","Данные организации");?></li>
 								<li><?php  echo anchor("billing/oplata","работа с оплатой");?></li>
 								<li><?php  echo anchor("billing/pre_perehod","сервис");?></li>
+                                <li><a href="<?php echo site_url('/billing/fine_info') ?>">Пеня</a></li>
 							</ul>
                             </div>
 							

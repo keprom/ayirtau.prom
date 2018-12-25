@@ -23,6 +23,10 @@
   Сумма <input name=value ><br>
   Номер документа <input name=document_number ><br>
 <input name=nds type=hidden value=12 >
+    Оплата <select name="pay_type" id="">
+        <option value="1">электроэнергии</option>
+        <option value="2">пени</option>
+    </select><br>
 <input type=submit value="Добавить оплату" >
 
 </form>
@@ -50,5 +54,41 @@ echo "<tr><td>{$o->dogovor}</td>
 </tr>";
  endforeach;?>
 </table>
+
+<!--FINE-->
+<br>
+<br>
+<?php if (isset($fine_oplata)): ?>
+    <table id="fine" class="border-table">
+        <caption>Пеня</caption>
+        <thead>
+        <tr>
+            <th>Номер<br>договора</th>
+            <th>Дата<br>оплаты</th>
+            <th>Номер<br>счета</th>
+            <th>Сумма<br>оплаты</th>
+            <th>НДС</th>
+            <th>Сумма<br>без НДС</th>
+            <th align=right>Номер<br>документа</th>
+            <th>X</th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($fine_oplata as $fo):
+            echo "<tr><td>{$fo->dogovor}</td>
+                <td>{$fo->data}</td>
+                <td>{$fo->number}</td>
+                <td align='right'>" . (f_d($fo->value * 1.12)) . "</td>
+                <td align='right'>" . (f_d($fo->value * 0.12)) . "</td>
+                <td align='right'>" . (f_d($fo->value * 1.00)) . "</td>
+                <td align=right>" . $fo->document_number . "</td>
+                <td>" . anchor('billing/fine_oplata_delete/' . $fo->id, 'x') . "</td>
+                </tr>";
+        endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+<!--END FINE-->
+
 </body>
 </html>

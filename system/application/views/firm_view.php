@@ -49,6 +49,10 @@ echo "<input type=submit value='Открыть ведомость' />";
 echo "</form><br>";
 
 ?>
+    <!--added-->
+    <a href="<?php echo site_url('billing/fine/'.$r->id); ?>"><button>Пеня</button></a>
+    <a href="<?php echo site_url('billing/pre_fine_akt_sverki/'.$r->id); ?>"><button>Акт сверки</button></a>
+    <!--end added-->
 </p>
 
 </h3>

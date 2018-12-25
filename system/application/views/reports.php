@@ -42,3 +42,5 @@ echo anchor("billing/pre_analiz_obwii_spisok","Анализ по общему т
 echo anchor("billing/pre_ip_obshiy","Частники, расчитывающиеся по общему тарифу")."<br>";
 echo anchor("billing/gos_poverka","Гос. поверка")."<br>";
 ?>
+<li><a href="<?php echo site_url('billing/pre_fine_2_re'); ?>"><?php echo '2-РЭ (пеня)'; ?></a></li>
+<li><a href="<?php echo site_url('billing/pre_fine_7_re'); ?>"><?php echo '7-РЭ (пеня)'; ?></a></li>

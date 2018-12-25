@@ -821,15 +821,26 @@ function dob($text)
 		$this->left();
 		$this->load->view("pre_schetfactura2",$data);
 		$this->load->view("right");
-	}	
+	}
+
 	function schetfactura()
-	{/**/
-				if (isset($_POST['akt_vypolnenyh_rabot']))
-				$data['akt_vypolnenyh_rabot']="Акт выполненых работ";
-				else
-				$data['akt_vypolnenyh_rabot']="";
-		
-				/**/
+	{
+        if (isset($_POST['akt_vypolnenyh_rabot']))
+        $data['akt_vypolnenyh_rabot']="Акт выполненых работ";
+        else
+        $data['akt_vypolnenyh_rabot']="";
+
+        #FINE
+        $this->db->where('period_id', $_POST['period_id']);
+        $this->db->where('firm_id', $_POST['firm_id']);
+        $isset_fine = $this->db->get("industry.fine_source_data")->num_rows();
+        if ((isset($isset_fine)) and ($isset_fine > 0)) {
+            $this->db->where('period_id', $_POST['period_id']);
+            $this->db->where('firm_id', $_POST['firm_id']);
+            $data['fine_value'] = $this->db->get("industry.fine_source_data")->row()->fine_value;
+        }
+        #END FINE
+
 		$this->db->where('id',$_POST['firm_id']);
 		$this->db->update('industry.firm',
 			array(
@@ -851,10 +862,7 @@ function dob($text)
 		$this->db->where('firm_id',$_POST['firm_id']);
 		$this->db->update('industry.schetfactura_date',
 			array(
-			
 			'schet2'=>$_POST['schet2']
-			
-			
 			)
 		);
 		$this->load->plugin('chislo');
@@ -1708,20 +1716,46 @@ function dob($text)
 	function oplata_import()
 	{		
 		$this->db->query(
-		"
-		delete from industry.oplata where data between  
-		   (select period.begin_date from industry.period
+		    "delete from industry.oplata where data between  
+		    (select period.begin_date from industry.period
                  left join industry.sprav on sprav.name='current_period'
 					where period.id=sprav.value) 
 					 and (select period.end_date from industry.period
                  left join industry.sprav on sprav.name='current_period'
 					where period.id=sprav.value) ;
-		insert into industry.oplata 
-			(firm_id,data,document_number,payment_number_id,value,nds)
-			select industry.firm_id_by_nomer1c(nomer1c) as firm_id,data,n_dokum, industry.schet_id_by_name(schet),
-			sum/(1+industry.current_nds()/100),industry.current_nds() from industry.oplata_buf 
-			where industry.firm_id_by_nomer1c(nomer1c) is not null and industry.schet_id_by_name(schet) is not null"
+		     insert into industry.oplata 
+			 (firm_id,data,document_number,payment_number_id,value,nds)
+			 select industry.firm_id_by_nomer1c(nomer1c) as firm_id,data,n_dokum, industry.schet_id_by_name(schet),
+			 sum/(1+industry.current_nds()/100),industry.current_nds() from industry.oplata_buf 
+			 where industry.firm_id_by_nomer1c(nomer1c) is not null and industry.schet_id_by_name(schet) is not null
+			 AND oplata_buf.vo <> 4"
 			);
+
+        #по 1с номеру
+        $this->db->query(
+            "DELETE FROM industry.fine_oplata WHERE data BETWEEN
+               (SELECT period.begin_date FROM industry.period
+                     LEFT JOIN industry.sprav ON sprav.name='current_period'
+                        WHERE period.id=sprav.value)
+                         AND (SELECT period.end_date FROM industry.period
+                     LEFT JOIN industry.sprav ON sprav.name='current_period'
+                        WHERE period.id=sprav.value) ;
+             INSERT INTO industry.fine_oplata
+                (firm_id,data,document_number,payment_number_id,value,nds)
+                SELECT 
+					industry.firm_id_by_nomer1c(nomer1c) AS firm_id,
+                    data,
+                    n_dokum, 
+                    industry.schet_id_by_name(schet),
+                    sum/(1+industry.current_nds()/100),
+                    industry.current_nds() 
+                FROM industry.oplata_buf
+                WHERE 
+				industry.firm_id_by_nomer1c(nomer1c) IS NOT NULL 
+                AND industry.schet_id_by_name(schet) IS NOT NULL
+                AND oplata_buf.vo = 4"
+        );
+
 		redirect ("billing");
 	}
 	function jpeg()
@@ -1811,6 +1845,11 @@ function dob($text)
 			$period=$this->db->query($sql)->row();
 			$this->session->set_userdata(array('begin_data'=>$period->begin_date,'end_data'=>$period->end_date));
 		}
+        #FINE
+        $this->db->where('data >= ', $this->session->userdata('begin_data'));
+        $this->db->where('data <= ', $this->session->userdata('end_data'));
+        $data['fine_oplata'] = $this->db->get("industry.fine_oplata_edit")->result();
+        #END FINE
 		$sql="select * from industry.oplata_edit where data between '".$this->session->userdata('begin_data')."' and '".$this->session->userdata('end_data')."'";
 		$data['oplata']=$this->db->query($sql);
 		$this->load->view('oplata/index',$data);
@@ -1872,6 +1911,48 @@ function dob($text)
 		$this->session->set_userdata($_POST);
 		redirect('billing/oplata');
 	}
+
+#метод переключения
+    function adding_oplata()
+    {
+
+        $sql = "select count(*) from industry.firm where dogovor=" . $_POST['dogovor'];
+        $count = $this->db->query($sql)->row()->count;
+        $current_nds = $this->db->query("select * from industry.current_nds()")->row()->current_nds;
+        $sql = "select id,name from industry.firm where dogovor=" . $_POST['dogovor'];
+        $query = $this->db->query($sql);
+        if ($count > 0) {
+            $firm_id = $this->db->query($sql)->row()->id;
+            $firm_name = $this->db->query($sql)->row()->name;
+            $data['firm_id'] = $firm_id;
+            $data['nds'] = $_POST['nds'];
+            $sql = "select count(*)  from industry.payment_number where number='" . $_POST['payment_number'] . "'";
+            $count = $this->db->query($sql)->row()->count;
+            $sql = "select id from industry.payment_number where number='" . $_POST['payment_number'] . "'";
+            echo $sql;
+            $query = $this->db->query($sql);
+            if ($count > 0) {
+                $data['payment_number_id'] = $query->row()->id;
+                $this->session->set_userdata(array(
+                    'data' => $_POST['data'], 'number' => $_POST['payment_number']
+                ));
+                $data['value'] = $_POST['value'] / (($current_nds + 100) / 100);
+                $data['data'] = $_POST['data'];
+                $data['document_number'] = $_POST['document_number'];
+                if ($_POST['pay_type'] == 1) {
+                    $this->db->insert('industry.oplata', $data);
+                } else {
+                    $this->db->insert('industry.fine_oplata', $data);
+                }
+                $this->session->set_flashdata('added', 'true');
+                $this->session->set_flashdata('firm_name', $firm_name);
+
+            }
+        }
+        redirect('billing/oplata');
+    }
+
+	/*
 	function adding_oplata()
 	{
 
@@ -1909,7 +1990,8 @@ function dob($text)
 			}
 		}
 		redirect('billing/oplata');
-	}
+	}*/
+
 	function pre_svod_po_tp()
 	{
 		$data['ture']=$this->db->get("industry.ture");
@@ -2222,7 +2304,7 @@ function dob($text)
 
     function perehod()
 	{
-		$this->db->query("select industry.goto_next_period();");
+        $this->db->query("select * from industry.goto_next_period_fine()");
 		$array = array(1 => 'Переход в следующий месяц прошел успешно!');
 		$this->session->set_flashdata('success', $array);		
 		redirect("billing");
@@ -2349,7 +2431,7 @@ function dob($text)
 	}
 	function nachislenie_v_buhgalteriu()
 	{
-		$nach=$this->db->get("industry.nachislenie_v_buhgalteriu");
+        $nach = $this->db->query("select *from industry.nachislenie_v_buhgalteriu union all select * from industry.nach_fine  order by \"NOMERSCHET\", \"NPENI\"");
 		
 		set_time_limit(0);
 		$db = dbase_open("c:/oplata/nach.dbf", 2);
@@ -2367,13 +2449,18 @@ function dob($text)
 			foreach ($nach->result() as $n)
 			{
 				dbase_add_record($db2,
-					
 						array (
-						$this->d2($n->DATA),
-						$n->NAIM,
-						$n->DOG,$n->NACH,$n->NACH_SUM,$n->NACH_NDS, $n->KVT, $this->dob($n->NOMERSCHET), $this->d2($n->KONDATA)
+						    $this->d2($n->DATA),
+                            $n->NAIM,
+                            $n->DOG,
+                            $n->NACH,
+                            $n->NACH_SUM,
+                            $n->NACH_NDS,
+                            $n->KVT,
+                            $this->dob($n->NOMERSCHET),
+                            $this->d2($n->KONDATA),
+                            $n->NPENI
 					));
-					
 			}
 			
 			dbase_close($db2);			
@@ -3162,6 +3249,572 @@ where firm_id={$this->uri->segment(3)} and data_finish is null";
         $this->db->delete("industry.tariff");
         redirect("billing/tariff_list");
     }
+
+
+    /*FINE*/
+    /*начальная страница по пене*/
+    public function fine_info()
+    {
+        if (isset($_POST['add_ref_rate'])) {
+            $rate_data = $_POST['rate_data'];
+            $rate_value = (float)$_POST['rate_value'];
+            if ((strlen($rate_data) == 10) and ($rate_value > 0) and ($rate_value < 100)) {
+                if ($this->db->insert('industry.ref_rate', array('data' => $rate_data, 'value' => $rate_value))) {
+                    echo "Значение добавлено!";
+                }
+            } else {
+                echo "Неверные значения!";
+            }
+        }
+
+        if (isset($_POST['add_ref_coef'])) {
+            $coef_data = $_POST['coef_data'];
+            $coef_value = (float)$_POST['coef_value'];
+            if ((strlen($coef_data) == 10) and ($coef_value > 0) and ($coef_value < 100)) {
+                if ($this->db->insert('industry.ref_coef', array('data' => $coef_data, 'value' => $coef_value))) {
+                    echo "Значение добавлено!";
+                }
+            } else {
+                echo "Неверные значения!";
+            }
+        }
+
+        $data['periods'] = $this->db->query(
+            "select distinct(period.id) as id,
+                period.name
+             from industry.fine_saldo
+             join industry.period on period.id = fine_saldo.period_id and fine_saldo.period_id-1< industry.current_period_id()
+             order by period.id desc"
+        )->result();
+
+        $this->db->order_by('data');
+        $data['ref_rates'] = $this->db->get('industry.ref_rate')->result();
+
+        $this->db->order_by('data');
+        $data['ref_coefs'] = $this->db->get('industry.ref_coef')->result();
+
+        $this->left();
+        $this->load->view('fine/fine_info', $data);
+        $this->load->view('right');
+    }
+
+    public function pre_fine_akt_sverki()
+    {
+        $data['firm_id'] = (int)$this->uri->segment(3);
+        $data['period'] = $this->db->query(
+            "select * from industry.period
+            where period.id <= industry.current_period_id()
+            and extract(year from period.end_date) = industry.get_current_year()
+            order by period.id desc"
+        )->result();
+        $this->left();
+        $this->load->view('fine/pre_fine_akt_sverki', $data);
+        $this->load->view('right');
+    }
+
+    public function fine_akt_sverki()
+    {
+        if ($_POST['period_id_start'] > $_POST['period_id_end']) {
+            exit("Стартовая дата превышает конечную!");
+        }
+
+        $firm_id = $this->uri->segment(3);
+
+        $this->db->where('id', $firm_id);
+        $data['firm'] = $this->db->get("industry.firm")->row();
+
+        $this->db->where('id', $_POST['period_id_end']);
+        $data['period_end'] = $this->db->get("industry.period")->row();
+
+        $this->db->where('start_period_id', $_POST['period_id_start']);
+        $this->db->where('end_period_id', $_POST['period_id_end']);
+        $this->db->where('firm_id', $firm_id);
+        $isset_akt = $this->db->get("industry.fine_akt_sverki")->num_rows();
+        $data['data_akta'] = date('d.m.Y');
+
+        $ins_arr = array(
+            'start_period_id' => $_POST['period_id_start'],
+            'end_period_id' => $_POST['period_id_end'],
+            'firm_id' => $firm_id,
+            'data' => date('Y-m-d')
+        );
+
+        $this->db->where('start_period_id', $_POST['period_id_start']);
+        $this->db->where('end_period_id', $_POST['period_id_end']);
+        $this->db->where('firm_id', $firm_id);
+        $isset_akt = $this->db->get('industry.fine_akt_sverki')->num_rows();
+
+        if ($isset_akt == 0) {
+            $this->db->insert('industry.fine_akt_sverki', $ins_arr);
+            $data['akt_number'] = $this->db->insert_id();
+        } else {
+            $this->db->where('start_period_id', $_POST['period_id_start']);
+            $this->db->where('end_period_id', $_POST['period_id_end']);
+            $this->db->where('firm_id', $firm_id);
+            $data['akt_number'] = $this->db->get("industry.fine_akt_sverki")->row()->id;
+
+            $this->db->where('start_period_id', $_POST['period_id_start']);
+            $this->db->where('end_period_id', $_POST['period_id_end']);
+            $this->db->where('firm_id', $firm_id);
+            $this->db->update('industry.fine_akt_sverki', array('data' => $data['data_akta']));
+        }
+
+
+        $data['org'] = $this->db->get("industry.org_info")->row();
+
+        $this->db->where('firm_id', $firm_id);
+        $this->db->where('period_id >=', $_POST['period_id_start']);
+        $this->db->where('period_id <=', $_POST['period_id_end']);
+        $data['akt'] = $this->db->get("industry.fine_akt_sverki_source")->result();
+        $data['firm_id'] = $firm_id;
+
+
+        $this->load->view('fine/fine_akt_sverki', $data);
+    }
+
+    public function current_year_calendar()
+    {
+        $data['calendar'] = $this->db->get('industry.current_year_calendar')->result();
+        $this->left();
+        $this->load->view("fine/current_year_calendar", $data);
+        $this->load->view('right');
+    }
+
+    public function change_calendar_day()
+    {
+        $day_id = $this->uri->segment(3);
+        $this->db->where('day_id', $day_id);
+        $is_off = $this->db->get('industry.fine_calendar')->row()->is_off;
+        $is_off = $is_off == 0 ? 1 : 0;
+
+        $this->db->where('day_id', $day_id);
+        $this->db->update('industry.fine_calendar', array('is_off' => $is_off));
+
+        redirect("billing/current_year_calendar");
+    }
+
+    /*подробное начисление пени для организации*/
+    public function fine()
+    {
+        $url_firm_id = $this->uri->segment(3);
+        $period_id = $this->db->query('select * from industry.current_period_id()')->row()->current_period_id;
+        $data['fine_periods'] = $this->db->query(
+            "select period.*
+             from industry.period
+             join industry.fine_firm on fine_firm.period_id = period.id
+             where fine_firm.firm_id = $url_firm_id and fine_firm.is_fine = TRUE
+             order by period.id desc"
+        )->result();
+
+        $data['fine_firm_oplata_periods'] = $this->db->query(
+            "select distinct(period.id),
+            period.name
+            from industry.period
+            join industry.fine_firm_oplata on fine_firm_oplata.period_id = period.id and fine_firm_oplata.firm_id = $url_firm_id
+            group by period.name, period.id"
+        )->result();
+
+        $this->db->where('firm_id', $url_firm_id);
+        $this->db->where('period_id', $period_id);
+        $data['fine_saldo'] = $this->db->get("industry.fine_saldo")->row();
+
+        $period_id = $this->db->query("select * from industry.current_period_id()")->row()->current_period_id;
+        $this->db->where('period_id', $period_id);
+        $this->db->where('firm_id', (int)$url_firm_id);
+        $data['fine_firm'] = $this->db->get('industry.fine_firm')->row();
+        $data['current_period'] = $period_id;
+        $this->db->where('id', (int)$url_firm_id);
+        $data['firm_info'] = $this->db->get('industry.firm')->row();
+
+        $this->left();
+        $this->load->view("fine/pre_firm_fine", $data);
+        $this->load->view("right");
+    }
+
+    public function fine_all_firm_options()
+    {
+        $data['options'] = $this->db->query(
+            "select
+            firm_group.\"name\" as group_name,
+            firm_subgroup.\"name\" as subgroup_name,
+            firm.dogovor,
+            firm.name as firm_name,
+            fine_firm.*
+            from industry.firm
+            join industry.firm_subgroup on firm_subgroup.id = firm.subgroup_id
+            join industry.firm_group on firm_group.id = firm_subgroup.group_id
+            join industry.fine_firm on fine_firm.firm_id = firm.id and fine_firm.period_id = industry.current_period_id()
+            order by 
+            firm_group.\"name\",
+            firm_subgroup.\"name\",
+            firm.dogovor"
+        )->result();
+
+        $this->left();
+        $this->load->view('fine/fine_all_firm_options', $data);
+        $this->load->view("right");
+    }
+
+    public function change_fine_parameter()
+    {
+        if (isset($_POST['change_is_fine'])) {
+            unset($_POST['change_is_fine']);
+
+            if (isset($_POST['is_fine'])) {
+                $_POST['is_fine'] = 'true';
+            } else {
+                $_POST['is_fine'] = 'false';
+            }
+
+            $period_id = $_POST['period_id'];
+            $firm_id = $_POST['firm_id'];
+            $this->db->where('period_id', $period_id);
+            $this->db->where('firm_id', $firm_id);
+            $is_fine_added = $this->db->get('industry.fine_firm')->num_rows();
+
+            if ($is_fine_added == 0) {
+
+            } else {
+                $this->db->where('period_id', $period_id);
+                $this->db->where('firm_id', $firm_id);
+                $this->db->update('industry.fine_firm', array(
+                    'is_fine' => $_POST['is_fine'],
+                    'border_day' => $_POST['border_day'],
+                    'is_calendar' => $_POST['is_calendar']
+                ));
+            }
+            redirect('billing/fine/' . $firm_id);
+        }
+    }
+
+    /*ведомость пени по фирме*/
+    public function fine_firm()
+    {
+        $firm_id = (int)$this->uri->segment(3);
+
+        $url_period = $this->uri->segment(4);
+        if ($url_period) {
+            $period_id = (int)$url_period;
+        } else {
+            $period_id = (int)$_POST['period_id'];
+        }
+        $this->db->where('id', $period_id);
+        $data['period_info'] = $this->db->get('industry.period')->row();
+
+        $this->db->where('id', $period_id - 1);
+        $data['prev_period_info'] = $this->db->get('industry.period')->row();
+
+        $data['current_ref_rate'] = $this->get_current_ref_rate($period_id);
+        $data['other_ref_rate'] = $this->get_other_ref_rate($period_id);
+
+        $data['current_ref_coef'] = $this->get_current_ref_coef($period_id);
+        $data['other_ref_coef'] = $this->get_other_ref_coef($period_id);
+
+        /*извлекаем исходные данные по организации*/
+        $this->db->where('firm_id', $firm_id);
+        $this->db->where('period_id', $period_id);
+        $fine_firm_info = $this->db->get("industry.fine_firm")->row();
+        $data['border_day'] = $fine_firm_info->border_day;
+
+        if ($fine_firm_info->is_calendar == 0) {
+            $data['border_day'] = $this->db->query("select * from industry.get_working_day({$period_id},{$data['border_day']})")->row()->get_working_day;
+        }
+
+        $pre_month_days = $this->db->query(
+            "SELECT 
+               fine_calendar.\"day\" as calendar_day,
+               fine_calendar.is_off,
+               weekday.*
+              FROM industry.fine_calendar
+              JOIN industry.period 
+                ON EXTRACT(MONTH FROM period.begin_date) = fine_calendar.\"month\"
+                AND EXTRACT(YEAR FROM period.begin_date) = fine_calendar.\"year\"
+              JOIN industry.weekday ON fine_calendar.day_of_week = weekday.day_number
+              WHERE period.id = $period_id
+              ORDER BY day_id"
+        )->result();
+
+        $data['month_days'] = array();
+        foreach ($pre_month_days as $pre_month_day) {
+            $data['month_days'][$pre_month_day->calendar_day]['is_off'] = $pre_month_day->is_off;
+            $data['month_days'][$pre_month_day->calendar_day]['day_shortname'] = $pre_month_day->day_shortname;
+        }
+
+        $this->db->where('firm_id', $firm_id);
+        $this->db->where('period_id', $period_id);
+        $firm_veds = $this->db->get("industry.fine_source_data")->row();
+
+        $data['fine_saldo'] = $this->db->query(
+            "select * from industry.fine_saldo where period_id = $period_id and firm_id = $firm_id"
+        )->row();
+
+        if (!empty($firm_veds)) {
+            $data['firm_veds'] = $firm_veds;
+            $firm_veds->oplata = $this->get_oplata_fine($firm_id, $period_id);
+            $this->load->view("fine/fine_firm", $data);
+        } else {
+            var_dump($firm_veds);
+            echo "Ошибка. Обратитесь к программисту";
+            session_start();
+        }
+    }
+
+    /* ведомость пени по всем незакрытым должникам*/
+    public function fine_all_firms()
+    {
+        $period_id = (int)$_POST['period_id'];
+        $this->db->where('id', $period_id);
+        $data['period'] = $this->db->get('industry.period')->row();
+        $data['fine_arr'] = $this->fine_calc_firms($period_id);
+        $this->load->view("fine/fine_all_firms", $data);
+    }
+
+    /*оплаты пени по организации*/
+    public function fine_firm_oplata()
+    {
+        $firm_id = (int)$this->uri->segment(3);
+
+        $this->db->where('id', $firm_id);
+        $data['firm_info'] = $this->db->get("industry.firm")->row();
+
+        $url_period = $this->uri->segment(4);
+        if ($url_period) {
+            $period_id = (int)$url_period;
+        } else {
+            $period_id = (int)$_POST['period_id'];
+        }
+
+        $this->db->where('firm_id', $firm_id);
+        $this->db->where('period_id', $period_id);
+        $data['fine_firm_oplata'] = $this->db->get('industry.fine_firm_oplata')->result();
+
+        $this->db->where('id', $period_id);
+        $data['period_info'] = $this->db->get("industry.period")->row();
+
+        $this->left();
+        $this->load->view("fine/fine_firm_oplata", $data);
+        $this->load->view("right");
+    }
+
+    /*сальдо пени*/
+    public function fine_saldo_origin()
+    {
+        $url_firm_id = $this->uri->segment(3);
+        if ($url_firm_id) {
+            $firm_id = (int)$url_firm_id;
+        } else {
+            $firm_id = (int)$_POST['period_id'];
+        }
+
+        $this->db->where('id', $firm_id);
+        $data['firm_info'] = $this->db->get("industry.firm")->row();
+
+        $this->db->where('firm_id', $firm_id);
+        $data['fine_saldo_origin'] = $this->db->get('industry.fine_saldo_origin')->result();
+
+        $this->left();
+        $this->load->view("fine/fine_saldo_origin", $data);
+        $this->load->view("right");
+    }
+
+    /*считает пеню для всех организаций*/
+    private function fine_calc_firms($period_id)
+    {
+        $this->db->where('period_id', $period_id);
+        $this->db->order_by('fine_value', 'DESC');
+        $firms = $this->db->get("industry.fine_total")->result();
+
+        $fine_arr = array();
+        foreach ($firms as $firm) {
+            if ($firm->fine_value > 0) {
+                $fine_arr[$firm->firm_id]['name'] = $firm->name;
+                $fine_arr[$firm->firm_id]['dogovor'] = $firm->dogovor;
+                $fine_arr[$firm->firm_id]['saldo'] = round($firm->saldo_value, 2);
+                $fine_arr[$firm->firm_id]['nach'] = round($firm->nach, 2);
+                $fine_arr[$firm->firm_id]['fs_start'] = $firm->fs_start_value;
+                $fine_arr[$firm->firm_id]['fs_end'] = $firm->fs_end_value;
+                $fine_arr[$firm->firm_id]['fo'] = $firm->fo_value;
+                $fine_arr[$firm->firm_id]['fine'] = $firm->fine_value;
+            }
+
+        }
+        return $fine_arr;
+    }
+
+    /*получение действующей ставки рефинансирования на начало периода*/
+    private function get_current_ref_rate($period_id)
+    {
+        return $this->db->query(
+            "select ref_rate.value from industry.ref_rate, industry.period 
+             where ref_rate.data<=period.begin_date and period.id = $period_id
+             order by ref_rate.data desc limit 1"
+        )->row()->value;
+    }
+
+    /*получение ставок рефинансирования, начавших свое действие в течение периода*/
+    private function get_other_ref_rate($period_id)
+    {
+        $other_ref_rate = $this->db->query(
+            "select EXTRACT(DAY FROM ref_rate.data)::INTEGER as day, ref_rate.value 
+             from industry.ref_rate, industry.period 
+             where ref_rate.data>=period.begin_date and ref_rate.data<=period.end_date 
+             and period.id = $period_id
+             order by ref_rate.data desc"
+        )->result();
+        $rate_buf = array();
+        foreach ($other_ref_rate as $rate) {
+            $rate_buf[(int)($rate->day)] = (float)($rate->value);
+        }
+        return $rate_buf;
+    }
+
+    /*получение действующего коэффициента для расчета пени на начало периода*/
+    private function get_current_ref_coef($period_id)
+    {
+        return $this->db->query(
+            "select ref_coef.value from industry.ref_coef, industry.period 
+             where ref_coef.data<=period.begin_date and period.id = $period_id
+             order by ref_coef.data desc limit 1"
+        )->row()->value;
+    }
+
+    /*получение коэффициентов для расчета пени, начавших свое действие в течение периода*/
+    private function get_other_ref_coef($period_id)
+    {
+        $other_ref_coef = $this->db->query(
+            "select EXTRACT(DAY FROM ref_coef.data)::INTEGER as day, ref_coef.value 
+             from industry.ref_coef, industry.period 
+             where ref_coef.data>=period.begin_date and ref_coef.data<=period.end_date 
+             and period.id = $period_id
+             order by ref_coef.data desc"
+        )->result();
+        $coef_buf = array();
+        foreach ($other_ref_coef as $coef) {
+            $coef_buf[(int)($coef->day)] = (float)($coef->value);
+        }
+        return $coef_buf;
+    }
+
+    /*оплаты организации по дням*/
+    private function get_oplata_fine($firm_id, $period_id)
+    {
+        /*извлекаем последний день месяца*/
+        $this->db->where('id', $period_id);
+        $end_date = $this->db->get('industry.period')->row()->end_date;
+        $end_day = get_day_number($end_date);
+        /*извлекаем все оплаты организации*/
+        $oplata_list_ar = $this->db->query(
+            "SELECT oplata.data as data,
+             SUM((oplata.value * (100::numeric + oplata.nds))/100)::NUMERIC as value
+             FROM industry.oplata, industry.period
+             WHERE firm_id=$firm_id
+             and oplata.data >=period.begin_date
+             and oplata.data <=period.end_date
+             and period.id = $period_id
+             GROUP BY oplata.data"
+        )->result();
+        /*заносим оплаты в ассоц. массив*/
+        $oplata_arr = array();
+
+        for ($i = 0; $i <= $end_day; $i++) {
+            $oplata_arr[$i] = 0;
+        }
+
+        foreach ($oplata_list_ar as $oplata_list) {
+            if (($oplata_list->data !== NULL) and ($oplata_list->value !== NULL)) {
+                $buf = explode('-', $oplata_list->data);
+                $buf = $buf[2];
+                $oplata_arr[(int)$buf] = (float)$oplata_list->value;
+            }
+        }
+        ksort($oplata_arr);
+        return $oplata_arr;
+    }
+
+    public function pre_fine_7_re()
+    {
+        $data['periods'] = $this->db->query(
+            "select 
+                distinct(period.id),
+                period.*
+             from industry.period
+             join industry.fine_firm on fine_firm.period_id = period.id
+             where fine_firm.is_fine = TRUE
+             order by period.id desc"
+        )->result();
+
+        $data['ture'] = $this->db->get("industry.ture")->result();
+
+        $this->left();
+        $this->load->view('fine/pre_fine_7_re', $data);
+        $this->load->view('right');
+    }
+
+    public function fine_7_re()
+    {
+        $this->db->where('id', $_POST['period_id']);
+        $data['period_name'] = $this->db->get("industry.period")->row()->name;
+
+        if ($_POST['ture_id'] == '-1') {
+            $this->db->where('period_id', $_POST['period_id']);
+        } else {
+            $this->db->where('id', $_POST['ture_id']);
+            $data['ture_name'] = $this->db->get("industry.ture")->row()->name;
+
+            $this->db->where('period_id', $_POST['period_id']);
+            $this->db->where('ture_id', $_POST['ture_id']);
+        }
+        $data['re'] = $this->db->get("industry.fine_7_re")->result();
+
+        $this->load->view('fine/fine_7_re', $data);
+    }
+
+    public function pre_fine_2_re()
+    {
+        $data['periods'] = $this->db->query(
+            "select 
+                distinct(period.id),
+                period.*
+             from industry.period
+             join industry.fine_firm on fine_firm.period_id = period.id
+             where fine_firm.is_fine = TRUE
+             order by period.id desc"
+        )->result();
+
+        $data['ture'] = $this->db->get("industry.ture")->result();
+        $this->left();
+        $this->load->view('fine/pre_fine_2_re', $data);
+        $this->load->view('right');
+    }
+
+    public function fine_2_re()
+    {
+        $this->db->where('id', $_POST['period_id']);
+        $data['period_name'] = $this->db->get("industry.period")->row()->name;
+
+        if ($_POST['ture_id'] == '-1') {
+            $this->db->where('period_id', $_POST['period_id']);
+            $data['re'] = $this->db->get("industry.fine_2_re")->result();
+        } else {
+            $this->db->where('period_id', $_POST['period_id']);
+            $this->db->where('ture_id', $_POST['ture_id']);
+            $data['re'] = $this->db->get("industry.fine_2_re_ture")->result();
+            $this->db->where('id', $_POST['ture_id']);
+            $data['ture_name'] = $this->db->get("industry.ture")->row()->name;
+        }
+
+        $this->load->view('fine/fine_2_re', $data);
+    }
+
+    function fine_oplata_delete()
+    {
+        $sql = "DELETE FROM industry.fine_oplata WHERE id=" . $this->uri->segment(3);
+        $this->db->query($sql);
+        redirect('billing/oplata');
+    }
+
+    #END OF FINE#
+
 }
 
 ?>
