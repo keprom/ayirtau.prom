@@ -18,6 +18,7 @@
         <th rowspan="2">Точка учета</th>
 		<th rowspan="2">Тип счетчика</th>
         <th rowspan="2">Гос.номер счетчика</th>
+        <th rowspan="2">Пломбы</th>
         <th colspan="2">Последняя инструментальная проверка</th>
         <th colspan="2">Срок. гос. поверки</th>
         <th colspan="2">Срок следующей гос. поверки</th>
@@ -40,6 +41,7 @@
         <td><?php echo $r->bill_name; ?></td>
 		<td><?php echo $r->name; ?></td>
         <td class="td-number"><?php echo $r->gos_nomer; ?></td>
+        <td align="right"><?php echo $r->seal; ?></td>
         <td><?php echo $r->bpic_data; ?></td>
         <td><?php echo $r->act_number; ?></td>
         <td><?php echo $r->data_gos_proverki; ?></td>
