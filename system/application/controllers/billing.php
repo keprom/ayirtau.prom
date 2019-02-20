@@ -506,6 +506,7 @@ function dob($text)
 	function changing_counter()
 	{
 		if ($_POST['data_gos_proverki']=='') $_POST['data_gos_proverki']=NULL;
+		if ($_POST['digit_count']=='') $_POST['digit_count']=NULL;
 		$this->db->where('id',$this->uri->segment(3));
 		$this->db->update('industry.counter',$_POST);
 		redirect('billing/counter/'.$this->uri->segment(3));
