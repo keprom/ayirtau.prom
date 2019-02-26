@@ -13,6 +13,7 @@
 <table class="border-table">
     <thead>
     <tr>
+        <th>Группа</th>
         <th>Договор</th>
         <th>Наименование</th>
         <th>кВт</th>
@@ -30,6 +31,7 @@
     ?>
     <?php foreach ($report as $r): ?>
         <tr>
+            <td><?php echo $r->subgroup_name; ?></td>
             <td><?php echo $r->dog; ?></td>
             <td><?php echo $r->name; ?></td>
             <td class="td-number"><?php echo $r->kvt; ?></td>
