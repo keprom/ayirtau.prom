@@ -49,7 +49,7 @@
     </tbody>
     <tfoot>
     <tr>
-        <th colspan="2">ИТОГО</th>
+        <th colspan="3">ИТОГО</th>
         <th class="th-number"><?php echo $itog_kvt; ?></th>
         <th></th>
         <th class="th-number"><?php echo $sum_snds; ?></th>
