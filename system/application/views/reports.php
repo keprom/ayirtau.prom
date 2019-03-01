@@ -46,3 +46,4 @@ echo anchor("billing/gos_poverka","Гос. поверка")."<br>";
 <li><a href="<?php echo site_url('billing/pre_fine_7_re'); ?>"><?php echo '7-РЭ (пеня)'; ?></a></li>
 <li><a href="<?php echo site_url('billing/kontragent_rek'); ?>"><?php echo 'Список контрагентов с реквизитами'; ?></a></li>
 <li><a href="<?php echo site_url('billing/pre_sf_verification'); ?>"><?php echo 'Номера счетов-фактур с начислениями'; ?></a></li>
+<li><a href="<?php echo site_url('billing/pre_kvt_year'); ?>"><?php echo 'Годовой свод по кВт за год'; ?></a></li>
