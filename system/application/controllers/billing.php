@@ -3995,6 +3995,22 @@ where firm_id={$this->uri->segment(3)} and data_finish is null";
         header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
         $this->load->view($view_name, $data);
     }
+
+    public function pre_kvt_year()
+    {
+        $data['period_years'] = $this->db->get("industry.period_years")->result();
+        $this->left();
+        $this->load->view("other_reports/kvt_year/pre_kvt_year", $data);
+        $this->load->view("right");
+    }
+
+    public function kvt_year()
+    {
+        $this->db->where('period_year', $_POST['period_year']);
+        $data['report'] = $this->db->get("industry.kvt_year")->result();
+        $this->load->view("other_reports/kvt_year/kvt_year", $data);
+    }
+
 }
 
 ?>
